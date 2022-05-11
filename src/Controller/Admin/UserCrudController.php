@@ -7,6 +7,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -14,6 +15,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 class UserCrudController extends AbstractCrudController
 {
     private UserPasswordHasherInterface $hasher;
+    const ROLES = [
+        "ROLE_ADMIN" => "ROLE_ADMIN",
+        "ROLE_SUPER_ADMIN" => "ROLE_SUPER_ADMIN",
+    ];
 
     public function __construct(UserPasswordHasherInterface $hasher)
     {
@@ -52,7 +57,7 @@ class UserCrudController extends AbstractCrudController
         $password = TextField::new('plainPassword', 'Password');
         $notes = AssociationField::new('notes');
         $id = IntegerField::new('id', 'ID');
-        $roles = TextField::new('roles');
+        $roles = ChoiceField::new('roles')->setChoices(self::ROLES)->allowMultipleChoices();
 
         if (Crud::PAGE_INDEX === $pageName) {
             return [$id, $email, $notes];
@@ -61,7 +66,7 @@ class UserCrudController extends AbstractCrudController
         } elseif (Crud::PAGE_NEW === $pageName) {
             return [$email, $password, $notes];
         } elseif (Crud::PAGE_EDIT === $pageName) {
-            return [$email, $password];
+            return [$email, $password, $roles];
         }
     }
 
@@ -70,7 +75,9 @@ class UserCrudController extends AbstractCrudController
      */
     private function updateUserPassword($user): void
     {
-        $encodedPassword = $this->hasher->hashPassword($user, $user->getPlainPassword());
-        $user->setPassword($encodedPassword);
+        if ($user->getPlainPassword()) {
+            $encodedPassword = $this->hasher->hashPassword($user, $user->getPlainPassword());
+            $user->setPassword($encodedPassword);
+        }
     }
 }
